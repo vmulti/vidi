@@ -53,6 +53,7 @@ pub fn output_count() int {
 }
 
 struct PortInfo {
+pub:
 	idx          int
 	name         string
 	model        string
@@ -129,9 +130,6 @@ pub fn new_ctx(cfg Config) ?&Context {
 }
 
 pub fn (mut c Context) open(idx int) ? {
-	if c.callback == voidptr(0) {
-		return error('callback is unset')
-	}
 	if c.in_port == 0 {
 		if C.MIDIInputPortCreate(c.client, C.CFStringCreateWithCString(0, c.cfg.name.str, 0), callback_wrapper, c, &c.in_port) != C.noErr {
 			return error('failed to open port $idx')
