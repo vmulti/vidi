@@ -1,8 +1,7 @@
 module vidi
 
-#include "windows.h"
-#include "mmsystem.h"
-#flag windows -lwinmm
+#flag -DWIN32_FULL
+#flag -lwinmm
 
 fn C.midiInGetNumDevs() u32
 fn C.midiOutGetNumDevs() u32
@@ -11,21 +10,9 @@ fn C.midiInStart(voidptr) u32
 fn C.midiInStop(voidptr) u32
 fn C.midiInClose(voidptr) u32
 
-type MidiCallback = fn(message []byte, timestamp f64, user_data voidptr)
-
-pub struct MidiConfig {
-	callback MidiCallback [required]
-	user_data voidptr
-	name string
-}
-
-struct MidiContext {
+struct ExtraContext {
 mut:
 	handle voidptr
-	callback MidiCallback [required]
-	name string
-pub mut:
-	user_data voidptr
 }
 
 pub fn input_count() int {
@@ -40,16 +27,18 @@ pub fn port_count() int {
 	return input_count() + output_count()
 }
 
-pub fn new_ctx(cfg MidiConfig) ?&MidiContext {
-	return &MidiContext {
-		callback: cfg.callback
-		user_data: cfg.user_data
-		name: cfg.name
+pub fn port_info(port int) PortInfo {
+	return PortInfo{}
+}
+
+pub fn new_ctx(cfg Config) ?&Context {
+	return &Context {
+		cfg: cfg
 	}
 }
 
 [windows_stdcall]
-fn callback_wrapper(handle voidptr, message_type int, ctx &MidiContext, param1 voidptr, param2 voidptr) {
+fn callback_wrapper(handle voidptr, message_type int, ctx &Context, param1 voidptr, param2 voidptr) {
 	match int(message_type) {
 		C.MIM_DATA {
 			message, timestamp := int(param1), f64(u32(param2))
@@ -59,18 +48,18 @@ fn callback_wrapper(handle voidptr, message_type int, ctx &MidiContext, param1 v
 				data << byte(message >> (8 * shift))
 			}
 
-			ctx.callback(data, timestamp, ctx.user_data)
+			ctx.cfg.callback(data, timestamp, ctx.cfg.user_data)
 		}
 		else {}
 	}
 }
 
-pub fn (mut ctx MidiContext) open(id int) ? {
+pub fn (mut ctx Context) open(id int) ? {
 	handle_err( C.midiInOpen(&ctx.handle, id, callback_wrapper, ctx, C.CALLBACK_FUNCTION) )?
 	handle_err( C.midiInStart(ctx.handle) )?
 }
 
-pub fn (mut ctx MidiContext) close() ? {
+pub fn (mut ctx Context) close() ? {
 	handle_err( C.midiInStop(ctx.handle) )?
 	handle_err( C.midiInClose(ctx.handle) )?
 }

@@ -15,3 +15,11 @@ pub struct Context {
 pub:
     cfg      Config
 }
+
+struct PortInfo {
+pub:
+	idx          int
+	name         string
+	model        string
+	manufacturer string
+}

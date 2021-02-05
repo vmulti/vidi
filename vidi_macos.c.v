@@ -52,14 +52,6 @@ pub fn output_count() int {
 	return int(C.MIDIGetNumberOfDestinations())
 }
 
-struct PortInfo {
-pub:
-	idx          int
-	name         string
-	model        string
-	manufacturer string
-}
-
 pub fn port_info(port int) PortInfo {
 	dev := C.MIDIGetDevice(port)
 
