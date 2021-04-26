@@ -42,7 +42,7 @@ fn callback_wrapper(handle voidptr, message_type int, ctx &Context, param1 voidp
 	match int(message_type) {
 		C.MIM_DATA {
 			message, timestamp := int(param1), f64(u32(param2))
-			mut data := []byte{}
+			mut data := []byte{ cap: 4 }
 
 			for shift in 0..4 {
 				data << byte(message >> (8 * shift))
