@@ -257,7 +257,7 @@ fn read_meta(file []byte, mut index_track &int, delta_time u64) ?TrkData {
 	meta_type := file[index]
 	index++
 	length := get_variable_length_value(file, mut &index)
-	data := subarray(file, index, index + int(length))
+	data := file[index .. index + int(length)].clone()
 	index += int(length)
 	mut meta := TrkData(Marker{})
 	match meta_type {
@@ -413,13 +413,13 @@ fn read_chunks(file []byte) ?Midi {
 	for index < file.len {
 		chunk_name := [file[index], file[index + 1], file[index + 2], file[index + 3]].bytestr()
 		index += 4
-		chunk_size := byte_to_int(subarray(file, index, index + 4))
+		chunk_size := byte_to_int(file[index .. index + 4].clone())
 		index += 4
 		match chunk_name {
 			'MThd' {
-				midi.format_type = byte_to_int(subarray(file, index, index + 2))
-				midi.number_tracks = byte_to_int(subarray(file, index + 2, index + 4))
-				midi.time_division_ = byte_to_int(subarray(file, index + 4, index + 6))
+				midi.format_type = byte_to_int(file[index .. index + 2].clone())
+				midi.number_tracks = byte_to_int(file[index + 2 .. index + 4].clone())
+				midi.time_division_ = byte_to_int(file[index + 4 .. index + 6].clone())
 			}
 			'MTrk' {
 				track := read_track(file, index, chunk_size) or { return none }
@@ -447,7 +447,7 @@ fn read_sysex(file []byte, mut index_track &int, delta_time u64, mut divide_syse
 	// sysex_type := file[index]
 	index++
 	length := get_variable_length_value(file, mut &index)
-	data := subarray(file, index, index + int(length))
+	data := file[index .. index + int(length)].clone()
 
 	unsafe { divide_sysex.push_many(data, data.len) }
 	if data[data.len - 1] != 0xF7 {
@@ -511,13 +511,6 @@ fn get_variable_length_value(bytes []byte, mut shift_index &int) u64 {
 	}
 	unsafe { *shift_index += index + 1 }
 	return value
-}
-
-fn subarray(arr []byte, start int, end int) []byte {
-	len := end - start
-	mut res := []byte{len: len}
-	unsafe { C.memcpy(res.data, byteptr(arr.data) + start, len) }
-	return res
 }
 
 fn (mut midi Midi) time_division() {
