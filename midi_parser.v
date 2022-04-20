@@ -3,12 +3,11 @@ module vidi
 import os
 
 // Copyright @henrixounez: https://github.com/Henrixounez/v-midi
-
 pub fn parse_file(filename string) ?Midi {
 	file := os.read_file(filename) or { return none }
 	mut midi := read_chunks(file.bytes()) or { return none }
 	midi.time_division()
-	for i in 0..midi.tracks.len {
+	for i in 0 .. midi.tracks.len {
 		midi.tracks[i].nb = i
 	}
 	return midi
@@ -17,66 +16,68 @@ pub fn parse_file(filename string) ?Midi {
 pub struct NoteOff {
 pub:
 	delta_time u64
-	channel    byte
-	note       byte
-	velocity   byte
+	channel    u8
+	note       u8
+	velocity   u8
 }
 
 pub struct NoteOn {
 pub:
 	delta_time u64
-	channel    byte
-	note       byte
-	velocity   byte
+	channel    u8
+	note       u8
+	velocity   u8
 }
 
 pub struct NoteAftertouch {
 pub:
 	delta_time u64
-	channel    byte
-	note       byte
-	amount     byte
+	channel    u8
+	note       u8
+	amount     u8
 }
 
 pub struct Controller {
 pub:
 	delta_time      u64
-	channel         byte
-	controller_type byte
-	value           byte
+	channel         u8
+	controller_type u8
+	value           u8
 }
 
 pub struct ProgramChange {
 pub:
 	delta_time     u64
-	channel        byte
-	program_number byte
+	channel        u8
+	program_number u8
 }
 
 pub struct ChannelAftertouch {
 pub:
 	delta_time u64
-	channel    byte
-	amount     byte
+	channel    u8
+	amount     u8
 }
 
 pub struct PitchBend {
 pub:
 	delta_time u64
-	channel    byte
-	lsb        byte
-	msb        byte
+	channel    u8
+	lsb        u8
+	msb        u8
 }
 
-fn read_midi_event(file []byte, mut index_track &int, delta_time u64, mut last_status &byte) ?TrkData {
+fn read_midi_event(file []u8, mut index_track &int, delta_time u64, mut last_status &u8) ?TrkData {
 	mut index := *index_track
-	use_curr_status := byte(file[index] & 0xf0) >> 4 >= 0x08
+	use_curr_status := u8(file[index] & 0xf0) >> 4 >= 0x08
 	status_byte := if use_curr_status { file[index] } else { *last_status }
 
-	event_type := byte(status_byte & 0xf0) >> 4
-	midi_channel := byte(status_byte & 0x0f)
+	event_type := u8(status_byte & 0xf0) >> 4
+	midi_channel := u8(status_byte & 0x0f)
 	if use_curr_status {
-		unsafe { *last_status = file[index] }
+		unsafe {
+			*last_status = file[index]
+		}
 		index++
 	}
 	mut event := TrkData(Marker{})
@@ -143,15 +144,17 @@ fn read_midi_event(file []byte, mut index_track &int, delta_time u64, mut last_s
 	if event_type != 0x0c && event_type != 0x0d {
 		index++
 	}
-	unsafe { *index_track = index }
+	unsafe {
+		*index_track = index
+	}
 	return event
 }
 
 pub struct SequenceNumber {
 pub:
 	delta_time u64
-	msb        byte
-	lsb        byte
+	msb        u8
+	lsb        u8
 }
 
 pub struct TextEvent {
@@ -205,7 +208,7 @@ pub:
 pub struct MidiChannelPrefix {
 pub:
 	delta_time u64
-	channel    byte
+	channel    u8
 }
 
 pub struct EndOfTrack {
@@ -222,42 +225,42 @@ pub:
 pub struct SMPTEOffset {
 pub:
 	delta_time u64
-	hour       byte
-	min        byte
-	sec        byte
-	fr         byte
-	subfr      byte
+	hour       u8
+	min        u8
+	sec        u8
+	fr         u8
+	subfr      u8
 }
 
 pub struct TimeSignature {
 pub:
 	delta_time u64
-	numer      byte
-	denom      byte
-	metro      byte
-	nds        byte
+	numer      u8
+	denom      u8
+	metro      u8
+	nds        u8
 }
 
 pub struct KeySignature {
 pub:
 	delta_time u64
-	key        byte
-	scale      byte
+	key        u8
+	scale      u8
 }
 
 pub struct SequencerSpecific {
 pub:
 	delta_time u64
-	data       []byte
+	data       []u8
 }
 
-fn read_meta(file []byte, mut index_track &int, delta_time u64) ?TrkData {
+fn read_meta(file []u8, mut index_track &int, delta_time u64) ?TrkData {
 	mut index := *index_track + 1
 
 	meta_type := file[index]
 	index++
 	length := get_variable_length_value(file, mut &index)
-	data := file[index .. index + int(length)].clone()
+	data := file[index..index + int(length)].clone()
 	index += int(length)
 	mut meta := TrkData(Marker{})
 	match meta_type {
@@ -373,15 +376,17 @@ fn read_meta(file []byte, mut index_track &int, delta_time u64) ?TrkData {
 			// return none
 		}
 	}
-	unsafe { *index_track = index }
+	unsafe {
+		*index_track = index
+	}
 	return meta
 }
 
-fn read_track(file []byte, index int, chunk_size int) ?Track {
+fn read_track(file []u8, index int, chunk_size int) ?Track {
 	mut track := Track{}
 	mut index_track := index
-	mut divide_sysex := []byte{}
-	mut last_status := byte(0)
+	mut divide_sysex := []u8{}
+	mut last_status := u8(0)
 
 	for index_track < index + chunk_size {
 		delta_time := get_variable_length_value(file, mut &index_track)
@@ -407,19 +412,19 @@ fn read_track(file []byte, index int, chunk_size int) ?Track {
 	return track
 }
 
-fn read_chunks(file []byte) ?Midi {
+fn read_chunks(file []u8) ?Midi {
 	mut midi := Midi{}
 	mut index := 0
 	for index < file.len {
 		chunk_name := [file[index], file[index + 1], file[index + 2], file[index + 3]].bytestr()
 		index += 4
-		chunk_size := byte_to_int(file[index .. index + 4].clone())
+		chunk_size := byte_to_int(file[index..index + 4].clone())
 		index += 4
 		match chunk_name {
 			'MThd' {
-				midi.format_type = byte_to_int(file[index .. index + 2].clone())
-				midi.number_tracks = byte_to_int(file[index + 2 .. index + 4].clone())
-				midi.time_division_ = byte_to_int(file[index + 4 .. index + 6].clone())
+				midi.format_type = byte_to_int(file[index..index + 2].clone())
+				midi.number_tracks = byte_to_int(file[index + 2..index + 4].clone())
+				midi.time_division_ = byte_to_int(file[index + 4..index + 6].clone())
 			}
 			'MTrk' {
 				track := read_track(file, index, chunk_size) or { return none }
@@ -438,25 +443,27 @@ fn read_chunks(file []byte) ?Midi {
 pub struct SysEx {
 pub:
 	delta_time u64
-	data       []byte
+	data       []u8
 }
 
-fn read_sysex(file []byte, mut index_track &int, delta_time u64, mut divide_sysex []byte) SysEx {
+fn read_sysex(file []u8, mut index_track &int, delta_time u64, mut divide_sysex []u8) SysEx {
 	mut index := *index_track
 
 	// sysex_type := file[index]
 	index++
 	length := get_variable_length_value(file, mut &index)
-	data := file[index .. index + int(length)].clone()
+	data := file[index..index + int(length)].clone()
 
 	unsafe { divide_sysex.push_many(data, data.len) }
 	if data[data.len - 1] != 0xF7 {
 		return SysEx{
-			data: []byte{}
+			data: []u8{}
 		}
 	}
 	index += int(length)
-	unsafe { *index_track = index }
+	unsafe {
+		*index_track = index
+	}
 	sysex := SysEx{
 		data: divide_sysex
 	}
@@ -464,14 +471,46 @@ fn read_sysex(file []byte, mut index_track &int, delta_time u64, mut divide_syse
 	return sysex
 }
 
-pub type TrkData = ChannelAftertouch | Controller | CopyrightNotice | CuePoint | DeviceName |
-	EndOfTrack | InstrumentName | KeySignature | Lyrics | Marker | MidiChannelPrefix |
-	NoteAftertouch | NoteOff | NoteOn | PitchBend | ProgramChange | SMPTEOffset | SequenceNumber |
-	SequencerSpecific | SetTempo | SysEx | TextEvent | TimeSignature | TrackName
+pub type TrkData = ChannelAftertouch
+	| Controller
+	| CopyrightNotice
+	| CuePoint
+	| DeviceName
+	| EndOfTrack
+	| InstrumentName
+	| KeySignature
+	| Lyrics
+	| Marker
+	| MidiChannelPrefix
+	| NoteAftertouch
+	| NoteOff
+	| NoteOn
+	| PitchBend
+	| ProgramChange
+	| SMPTEOffset
+	| SequenceNumber
+	| SequencerSpecific
+	| SetTempo
+	| SysEx
+	| TextEvent
+	| TimeSignature
+	| TrackName
 
-pub type Meta = CopyrightNotice | CuePoint | EndOfTrack | InstrumentName | KeySignature |
-	Lyrics | Marker | MidiChannelPrefix | SMPTEOffset | SequenceNumber | SequencerSpecific |
-	SetTempo | TextEvent | TimeSignature | TrackName
+pub type Meta = CopyrightNotice
+	| CuePoint
+	| EndOfTrack
+	| InstrumentName
+	| KeySignature
+	| Lyrics
+	| Marker
+	| MidiChannelPrefix
+	| SMPTEOffset
+	| SequenceNumber
+	| SequencerSpecific
+	| SetTempo
+	| TextEvent
+	| TimeSignature
+	| TrackName
 
 pub struct Track {
 pub mut:
@@ -489,7 +528,7 @@ pub mut:
 	micros_per_tick int
 }
 
-fn byte_to_int(bytes []byte) int {
+fn byte_to_int(bytes []u8) int {
 	mut res := 0
 	for i in 0 .. bytes.len {
 		res += bytes[bytes.len - (i + 1)] << (i << 3)
@@ -497,7 +536,7 @@ fn byte_to_int(bytes []byte) int {
 	return res
 }
 
-fn get_variable_length_value(bytes []byte, mut shift_index &int) u64 {
+fn get_variable_length_value(bytes []u8, mut shift_index &int) u64 {
 	mut value := u64(0)
 	mut index := 0
 
@@ -509,7 +548,9 @@ fn get_variable_length_value(bytes []byte, mut shift_index &int) u64 {
 		value <<= 7
 		index++
 	}
-	unsafe { *shift_index += index + 1 }
+	unsafe {
+		*shift_index += index + 1
+	}
 	return value
 }
 

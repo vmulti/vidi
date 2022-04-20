@@ -13,7 +13,7 @@ pub fn output_count() int {
 }
 
 pub fn port_info(port int) PortInfo {
-	return PortInfo {}
+	return PortInfo{}
 }
 
 // Extra `Context` data; contains fields that are specific to one implementation
@@ -21,15 +21,17 @@ struct ExtraContext {
 }
 
 pub fn new_ctx(cfg Config) ?&Context {
-	mut c := &Context{ cfg: cfg }
+	mut c := &Context{
+		cfg: cfg
+	}
 	return c
 }
 
 pub fn (mut c Context) open(idx int) ? {
-	return error("unimplemented")
+	return error('unimplemented')
 }
 
 pub fn (mut c Context) close() ? {
 	// TODO
-	return error("unimplemented")
+	return error('unimplemented')
 }

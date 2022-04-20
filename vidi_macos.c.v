@@ -9,7 +9,7 @@ module vidi
 struct C.MIDIPacket {
 	timeStamp u64
 	length    u16
-	data      [256]byte
+	data      [256]u8
 }
 
 [typedef]
@@ -59,9 +59,9 @@ pub fn port_info(port int) PortInfo {
 	mut pmanuf := voidptr(0)
 	mut pmodel := voidptr(0)
 
-	mut name := [128]byte{}
-	mut manuf := [128]byte{}
-	mut model := [128]byte{}
+	mut name := [128]u8{}
+	mut manuf := [128]u8{}
+	mut model := [128]u8{}
 
 	C.MIDIObjectGetStringProperty(dev, C.kMIDIPropertyName, &pname)
 	C.MIDIObjectGetStringProperty(dev, C.kMIDIPropertyManufacturer, &pmanuf)
@@ -74,7 +74,7 @@ pub fn port_info(port int) PortInfo {
 	C.CFRelease(pmanuf)
 	C.CFRelease(pmodel)
 
-	return PortInfo {
+	return PortInfo{
 		idx: port
 		name: tos_clone(byteptr(name))
 		model: tos_clone(byteptr(model))
@@ -92,10 +92,12 @@ mut:
 }
 
 fn callback_wrapper(packets &C.MIDIPacketList, c &Context, something_else voidptr) {
-	if c == 0 { return }
+	if c == 0 {
+		return
+	}
 	mut packet := packets.packet
 	for _ in 0 .. packets.numPackets {
-		mut buf := []byte{ len: int(packet.length) }
+		mut buf := []u8{len: int(packet.length)}
 		unsafe { C.memcpy(buf.data, packet.data, packet.length) }
 		timestamp := (f64(packet.timeStamp) - c.start) / 1e6 // in milliseconds
 
@@ -113,7 +115,9 @@ fn callback_wrapper(packets &C.MIDIPacketList, c &Context, something_else voidpt
 }
 
 pub fn new_ctx(cfg Config) ?&Context {
-	mut c := &Context{ cfg: cfg }
+	mut c := &Context{
+		cfg: cfg
+	}
 	c.start = f64(C.AudioGetCurrentHostTime())
 	if C.MIDIClientCreate(C.CFStringCreateWithCString(0, c.cfg.name.str, 0), 0, 0, &c.client) != C.noErr {
 		return error('failed to create client')
@@ -123,7 +127,8 @@ pub fn new_ctx(cfg Config) ?&Context {
 
 pub fn (mut c Context) open(idx int) ? {
 	if c.in_port == 0 {
-		if C.MIDIInputPortCreate(c.client, C.CFStringCreateWithCString(0, c.cfg.name.str, 0), callback_wrapper, c, &c.in_port) != C.noErr {
+		if C.MIDIInputPortCreate(c.client, C.CFStringCreateWithCString(0, c.cfg.name.str,
+			0), callback_wrapper, c, &c.in_port) != C.noErr {
 			return error('failed to open port $idx')
 		}
 	}

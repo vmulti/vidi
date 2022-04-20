@@ -1,19 +1,19 @@
 module vidi
 
-pub type Callback = fn(buf []byte, timestamp f64, userdata voidptr)
+pub type Callback = fn (buf []u8, timestamp f64, userdata voidptr)
 
 pub struct Config {
 pub mut:
-    callback  Callback [required]
-    user_data voidptr
-    name      string
+	callback  Callback [required]
+	user_data voidptr
+	name      string
 }
 
 [noinit]
 pub struct Context {
-    ExtraContext
+	ExtraContext
 pub:
-    cfg      Config
+	cfg Config
 }
 
 struct PortInfo {
